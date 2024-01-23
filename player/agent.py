@@ -4,9 +4,11 @@ import pickle
 
 from lib import util
 from lib.AIWolf.commands import AIWolfCommand
+from lib.embedding.embedding import Embedding
 from lib.llm.openai_client import OpenAIClient
 from lib.llm.query import game_rule  # テスト用
 from lib.llm.query import game_info
+from torch.nn.functional import cosine_similarity
 
 
 class Agent:
@@ -16,7 +18,17 @@ class Agent:
         self.gameContinue = True
         self.game_rule = None
         self.data = []  # テスト用
+        self.agent_role_suspect = {}  # 各エージェントがどのような役職だと疑っているか
         self.client = OpenAIClient()
+        self.embedding_model = Embedding()
+
+        # daily_initialize
+        self.game_info_text = None
+        self.over = False
+
+        # talk
+        self.todays_talk_history = []
+        self.last_talk_emb = []
 
         randomTalk = inifile.get("randomTalk", "path")
         _ = util.check_config(randomTalk)
@@ -52,6 +64,16 @@ class Agent:
             print(self.game_rule)
         self.request = data["request"]
         self.talkHistory = data["talkHistory"]
+        if self.talkHistory:
+            suspects = util.map_async(
+                func=self.embedding_model.check_role_suspicion,
+                data=[talk["text"] for talk in self.talkHistory],
+                limit=8
+            )
+            for suspect, talk in zip(suspects, self.talkHistory):
+                if suspect is not None:
+                    self.agent_role_suspect[talk["agent"]] = suspect
+            self.todays_talk_history.append(self.talkHistory)
         self.whisperHistory = data["whisperHistory"]
 
     def initialize(self) -> None:
@@ -61,6 +83,8 @@ class Agent:
     def daily_initialize(self) -> None:
         self.alive = []
         self.todays_talk_history = []
+        self.last_talk_emb = None
+        self.over = False
         for agent_num in self.gameInfo["statusMap"]:
             if (
                 self.gameInfo["statusMap"][agent_num] == "ALIVE"
@@ -70,7 +94,6 @@ class Agent:
         self.game_info_text = game_info(self.gameInfo, self.role)
 
     def daily_finish(self) -> None:
-        self.todays_talk_history.append(self.talkHistory)
         pass
 
     def get_name(self) -> str:
@@ -81,25 +104,47 @@ class Agent:
 
     # TODO: 会話の内容を考える
     def talk(self) -> str:
-        self.todays_talk_history.append(self.talkHistory)
+        if self.over:
+            return "Over"
         # 1. 前日までの人狼の状況を簡潔にまとめる。
         # (daily_initializeでself.game_info_textに作成)
         # 2. 今日の今までの会話を追加する。
         latest_talks = "\n".join(
-            [f'Agent[{talk["agent"]}]: {talk["text"]}'
+            [f'Agent[0{talk["agent"]}]: {talk["text"]}'
              for talk in self.talkHistory])
         # 3. gptに聞く。
-        response = self.client.talk(
+        response = self.client.talk(  # TODO: 占いの結果が渡されていなかった😭
             agent_index=self.index,
             game_setting=self.game_rule,
             game_info=self.game_info_text,
             talkHistory=latest_talks
         )
-        return util.random_select(self.comments)
+        response_emb = self.embedding_model.encode(
+            response
+        )
+        if self.last_talk_emb is not None:
+            if (cosine_similarity(response_emb,
+                                  self.last_talk_emb,
+                                  dim=2).item()) > 0.9:
+                response = "Over"
+                self.over = True
+        self.last_talk_emb = response_emb
+        return response
+        # return util.random_select(self.comments)
 
     # TODO: 投票方法を考える
     def vote(self) -> str:
-        data = {"agentIdx": util.random_select(self.alive)}
+        latest_talks = "\n".join(
+            [f'Agent[0{talk["agent"]}]: {talk["text"]}'
+             for talk in self.todays_talk_history])
+        arguments = self.client.vote(
+            agent_index=self.index,
+            game_setting=self.game_rule,
+            game_info=self.game_info_text,
+            talkHistory=latest_talks
+        )
+        return arguments
+        # data = {"agentIdx": util.random_select(self.alive)}
 
         return json.dumps(data, separators=(",", ":"))
 
@@ -142,6 +187,9 @@ class Agent:
         new_agent.gameContinue = self.gameContinue
         new_agent.comments = self.comments
         new_agent.received = self.received
+        new_agent.client = self.client
+        new_agent.embedding_model = self.embedding_model
+        new_agent.agent_role_suspect = self.agent_role_suspect
 
         # get_info
         new_agent.gameInfo = self.gameInfo
@@ -153,3 +201,12 @@ class Agent:
         # initialize
         new_agent.index = self.index
         new_agent.role = self.role
+
+        # daily_initialize
+        new_agent.game_info_text = self.game_info_text
+        new_agent.over = self.over
+        
+        # talk
+        new_agent.todays_talk_history = self.todays_talk_history
+        new_agent.last_talk_emb = self.last_talk_emb
+

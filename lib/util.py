@@ -1,3 +1,4 @@
+import asyncio
 import configparser
 import errno
 import os
@@ -55,3 +56,16 @@ def check_config(config_path: str) -> configparser.ConfigParser:
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), config_path)
 
     return configparser.ConfigParser()
+
+
+def map_async(func, data, limit):
+    loop = asyncio.get_event_loop()
+
+    async def run_all():
+        sem = asyncio.Semaphore(limit)
+
+        async def run_each(d):
+            async with sem:
+                return await loop.run_in_executor(None, func, d)
+        return await asyncio.gather(*[run_each(d) for d in data])
+    return loop.run_until_complete(run_all())  # list
