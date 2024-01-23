@@ -1,3 +1,15 @@
+# 実行手順
+1. `res/requirements.txt`を元に仮想環境を構築、起動
+
+2. `env/`ディレクトリに`env/env.sample`を参考に`.env`ファイルを作成し、各種環境変数を設定してください。
+
+3. このレポジトリをクローンしたディレクトリにターミナルで移動し`python initial.py`を実行してください。
+必要なモデルのダウンロードおよびデータの作成を行います。
+s
+4. 以下の説明を元に設定し、`python multiprocess.py`から本コードを実行してください。
+
+
+
 # AIWolfNLAgentPython
 A sample python code of an AIWolf Contest's agent for Natural Language Division.
 The server code is [AIWolfNLGameServer](https://github.com/aiwolfdial/AIWolfNLGameServer)
