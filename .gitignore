@@ -3,3 +3,8 @@ venv/
 .git
 *.env
 *.pickle
+embedding_model/*
+!/embedding_model/**/.gitkeep
+lib/embedding/data/*
+!/lib/embedding/data/**/.gitkeep
+```
