@@ -3,6 +3,10 @@ import json
 
 import lib
 import player
+from lib import util
+from lib.llm.query import role_suspicion
+
+LOGGER = util.build_logger(__name__)
 
 
 class Werewolf(player.agent.Agent):
@@ -40,6 +44,19 @@ class Werewolf(player.agent.Agent):
         return super().whisper()
 
     def attack(self):
+        LOGGER.info(f"[{self.name}] ATTACK")
+        role_suspicion_text = role_suspicion(self.agent_role_suspect)
+        latest_talks = "\n".join(
+            [f'Agent[0{talk["agent"]}]: {talk["text"]}'
+             for talk in self.todays_talk_history])
+        arguments = self.client.attack(
+            game_setting=self.game_rule,
+            game_info=self.game_info_text,
+            role_suspicion=role_suspicion_text,
+            talkHistory=latest_talks
+        )
+        LOGGER.info(f"[{self.name}] ATTACK end")
+        return arguments
         data = {"agentIdx": lib.util.random_select(self.alive)}
 
         return json.dumps(data, separators=(",", ":"))
