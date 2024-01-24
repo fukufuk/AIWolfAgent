@@ -25,7 +25,7 @@ class Embedding:
             outputs.last_hidden_state,
             batch_dict["attention_mask"])
         return embeddings.unsqueeze(0)
-    
+
     def check_role_suspicion(self, text: str) -> str:
         txt_emb = self.encode(text)
         sim = cosine_similarity(torch.cat(self.ex_scripts[1]),

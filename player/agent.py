@@ -6,9 +6,10 @@ from lib import util
 from lib.AIWolf.commands import AIWolfCommand
 from lib.embedding.embedding import Embedding
 from lib.llm.openai_client import OpenAIClient
-from lib.llm.query import game_rule  # テスト用
-from lib.llm.query import game_info
+from lib.llm.query import game_info, game_rule, role_suspicion
 from torch.nn.functional import cosine_similarity
+
+LOGGER = util.build_logger(__name__)
 
 
 class Agent:
@@ -19,12 +20,14 @@ class Agent:
         self.game_rule = None
         self.data = []  # テスト用
         self.agent_role_suspect = {}  # 各エージェントがどのような役職だと疑っているか
+        # TODO: エージェントの数を反映する
+        for i in range(1, 6):
+            self.agent_role_suspect[i] = []
         self.client = OpenAIClient()
         self.embedding_model = Embedding()
 
         # daily_initialize
         self.game_info_text = None
-        self.over = False
 
         # talk
         self.todays_talk_history = []
@@ -61,18 +64,20 @@ class Agent:
         self.gameSetting = data["gameSetting"]
         if (self.gameSetting is not None) and (self.game_rule is None):
             self.game_rule = game_rule(self.gameSetting)
-            print(self.game_rule)
         self.request = data["request"]
         self.talkHistory = data["talkHistory"]
         if self.talkHistory:
+            LOGGER.info(f'f"[{self.name}] start embedding talkHistory')
             suspects = util.map_async(
                 func=self.embedding_model.check_role_suspicion,
                 data=[talk["text"] for talk in self.talkHistory],
                 limit=8
             )
+            LOGGER.info(f'f"[{self.name}] end embedding talkHistory')
             for suspect, talk in zip(suspects, self.talkHistory):
                 if suspect is not None:
-                    self.agent_role_suspect[talk["agent"]] = suspect
+                    if suspect not in self.agent_role_suspect[talk["agent"]]:
+                        self.agent_role_suspect[talk["agent"]].append(suspect)
             self.todays_talk_history.append(self.talkHistory)
         self.whisperHistory = data["whisperHistory"]
 
@@ -84,7 +89,6 @@ class Agent:
         self.alive = []
         self.todays_talk_history = []
         self.last_talk_emb = None
-        self.over = False
         for agent_num in self.gameInfo["statusMap"]:
             if (
                 self.gameInfo["statusMap"][agent_num] == "ALIVE"
@@ -104,21 +108,24 @@ class Agent:
 
     # TODO: 会話の内容を考える
     def talk(self) -> str:
-        if self.over:
-            return "Over"
+        LOGGER.info(f"[{self.name}] talk")
         # 1. 前日までの人狼の状況を簡潔にまとめる。
         # (daily_initializeでself.game_info_textに作成)
-        # 2. 今日の今までの会話を追加する。
+        # 2. 前日までの会話を追加する。
+        role_suspicion_text = role_suspicion(self.agent_role_suspect)
+        # 3. 今日の今までの会話を追加する。
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
              for talk in self.talkHistory])
-        # 3. gptに聞く。
+        # 4. gptに聞く。
         response = self.client.talk(  # TODO: 占いの結果が渡されていなかった😭
             agent_index=self.index,
             game_setting=self.game_rule,
             game_info=self.game_info_text,
+            role_suspicion=role_suspicion_text,
             talkHistory=latest_talks
         )
+        # 5. 回答が前回の回答と似ていたらOverを返す。
         response_emb = self.embedding_model.encode(
             response
         )
@@ -127,26 +134,27 @@ class Agent:
                                   self.last_talk_emb,
                                   dim=2).item()) > 0.9:
                 response = "Over"
-                self.over = True
+                LOGGER.info('Over')
         self.last_talk_emb = response_emb
+        # 回答を返す。
+        LOGGER.info(f"[{self.name}] talk end")
         return response
-        # return util.random_select(self.comments)
 
     # TODO: 投票方法を考える
     def vote(self) -> str:
+        LOGGER.info(f"[{self.name}] vote")
+        role_suspicion_text = role_suspicion(self.agent_role_suspect)
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
              for talk in self.todays_talk_history])
         arguments = self.client.vote(
-            agent_index=self.index,
             game_setting=self.game_rule,
             game_info=self.game_info_text,
+            role_suspicion=role_suspicion_text,
             talkHistory=latest_talks
         )
+        LOGGER.info(f"[{self.name}] vote end")
         return arguments
-        # data = {"agentIdx": util.random_select(self.alive)}
-
-        return json.dumps(data, separators=(",", ":"))
 
     # TODO: 仲間内での会話を考える
     def whisper(self) -> None:
@@ -204,9 +212,7 @@ class Agent:
 
         # daily_initialize
         new_agent.game_info_text = self.game_info_text
-        new_agent.over = self.over
-        
+
         # talk
         new_agent.todays_talk_history = self.todays_talk_history
         new_agent.last_talk_emb = self.last_talk_emb
-
