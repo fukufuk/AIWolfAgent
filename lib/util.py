@@ -1,6 +1,7 @@
 import asyncio
 import configparser
 import errno
+import logging
 import os
 import random
 
@@ -69,3 +70,11 @@ def map_async(func, data, limit):
                 return await loop.run_in_executor(None, func, d)
         return await asyncio.gather(*[run_each(d) for d in data])
     return loop.run_until_complete(run_all())  # list
+
+
+def build_logger(name: str) -> logging.Logger:
+    logging.basicConfig(
+        format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO
+    )
+    LOGGER = logging.getLogger(name)
+    return LOGGER
