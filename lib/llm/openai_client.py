@@ -43,7 +43,7 @@ class OpenAIClient:
         response = self.client.chat.completions.create(
             messages=messages,
             tools=tools,
-            tool_choice="none",
+            tool_choice={"type": "function", "function": {"name": "decide_person_to_vote"}},
             model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
             temperature=0
         )
@@ -62,7 +62,7 @@ class OpenAIClient:
         response = self.client.chat.completions.create(
             messages=messages,
             tools=tools,
-            tool_choice="none",
+            tool_choice={"type": "function", "function": {"name": "decide_person_to_divine"}},
             model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
             temperature=0
         )
@@ -81,7 +81,7 @@ class OpenAIClient:
         response = self.client.chat.completions.create(
             messages=messages,
             tools=tools,
-            tool_choice="none",
+            tool_choice={"type": "function", "function": {"name": "decide_person_to_attack"}},
             model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
             temperature=0
         )
@@ -141,7 +141,7 @@ def _create_vote_tools():
                     "type": "object",
                     "properties": {
                         "agentIdx": {
-                            "type": "int",
+                            "type": "integer",
                             "description": "the number of the agent who is deciding who to vote for",
                         },
                     },
@@ -180,7 +180,7 @@ def _create_divine_tools():
                     "type": "object",
                     "properties": {
                         "agentIdx": {
-                            "type": "int",
+                            "type": "integer",
                             "description": "the number of the agent who is deciding who to divine",
                         },
                     },
@@ -219,7 +219,7 @@ def _create_attack_tools():
                     "type": "object",
                     "properties": {
                         "agentIdx": {
-                            "type": "int",
+                            "type": "integer",
                             "description": "the number of the agent who is deciding who to attack",
                         },
                     },
