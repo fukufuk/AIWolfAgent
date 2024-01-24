@@ -1,30 +1,36 @@
-import pickle
-from time import time
+from env import load_env
+from lib.llm import openai_client
 
-import torch
-from lib import util
-from lib.embedding import Embedding
-from torch.nn.functional import cosine_similarity
+load_env()
+client = openai_client.OpenAIClient()
+print(client.vote("", "", "", "Agent[04]: Agent[01]は人狼だと思います！"))
+# import pickle
+# from time import time
 
-texts = ["私はAgent[01]のことを本物の占い師だと信じていません！", "私はAgent[02]のことを本物の占い師だと信じていません！", "私はAgent[03]のことを本物の占い師だと信じていません！"]
-embedding = Embedding()
-start = time()
-suspects = util.map_async(
-    func=embedding.check_role_suspicion,
-    data=texts,
-    limit=8
-)
-end = time()
-print(suspects)
-print(end - start)
-start = time()
-suspects = []
-for t in texts:
-    tx = embedding.check_role_suspicion(t)
-    suspects.append(tx)
-end = time()
-print(suspects)
-print(end - start)
+# import torch
+# from lib import util
+# from lib.embedding import Embedding
+# from torch.nn.functional import cosine_similarity
+
+# texts = ["私はAgent[01]のことを本物の占い師だと信じていません！", "私はAgent[02]のことを本物の占い師だと信じていません！", "私はAgent[03]のことを本物の占い師だと信じていません！"]
+# embedding = Embedding()
+# start = time()
+# suspects = util.map_async(
+#     func=embedding.check_role_suspicion,
+#     data=texts,
+#     limit=8
+# )
+# end = time()
+# print(suspects)
+# print(end - start)
+# start = time()
+# suspects = []
+# for t in texts:
+#     tx = embedding.check_role_suspicion(t)
+#     suspects.append(tx)
+# end = time()
+# print(suspects)
+# print(end - start)
 
 
 # with open('lib/embedding/data/script_emb.pickle', 'rb') as f:

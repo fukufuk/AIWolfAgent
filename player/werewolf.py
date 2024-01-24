@@ -3,10 +3,10 @@ import json
 
 import lib
 import player
-from lib import util
 from lib.llm.query import role_suspicion
+from lib.logger import build_logger
 
-LOGGER = util.build_logger(__name__)
+LOGGER = build_logger(__name__)
 
 
 class Werewolf(player.agent.Agent):

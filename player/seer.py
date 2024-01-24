@@ -2,11 +2,11 @@ import configparser
 
 # import lib
 import player
-from lib import util
 from lib.llm.query import role_suspicion
+from lib.logger import build_logger
 
 # import json
-LOGGER = util.build_logger(__name__)
+LOGGER = build_logger(__name__)
 
 
 class Seer(player.agent.Agent):

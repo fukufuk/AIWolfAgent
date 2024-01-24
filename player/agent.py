@@ -7,9 +7,10 @@ from lib.AIWolf.commands import AIWolfCommand
 from lib.embedding.embedding import Embedding
 from lib.llm.openai_client import OpenAIClient
 from lib.llm.query import game_info, game_rule, role_suspicion
+from lib.logger import build_logger
 from torch.nn.functional import cosine_similarity
 
-LOGGER = util.build_logger(__name__)
+LOGGER = build_logger(__name__)
 
 
 class Agent:
@@ -78,7 +79,8 @@ class Agent:
                 if suspect is not None:
                     if suspect not in self.agent_role_suspect[talk["agent"]]:
                         self.agent_role_suspect[talk["agent"]].append(suspect)
-            self.todays_talk_history.append(self.talkHistory)
+            LOGGER.info(f'f"[{self.name}] update agent_role_suspect: {self.agent_role_suspect}')
+            self.todays_talk_history.extend(self.talkHistory)
         self.whisperHistory = data["whisperHistory"]
 
     def initialize(self) -> None:
