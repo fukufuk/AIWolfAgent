@@ -19,6 +19,7 @@ class Agent:
         self.received = []
         self.gameContinue = True
         self.game_rule = None
+        self.divine_results = []
         self.data = []  # テスト用
         self.agent_role_suspect = {}  # 各エージェントがどのような役職だと疑っているか
         # TODO: エージェントの数を反映する
@@ -62,24 +63,27 @@ class Agent:
         self.data.append(data)  # テスト用
 
         self.gameInfo = data["gameInfo"]
+        if self.gameInfo is not None:
+            if (self.gameInfo['divineResult'] is not None) and (self.gameInfo['divineResult'] not in self.divine_results):
+                self.divine_results.append(self.gameInfo['divineResult'])
         self.gameSetting = data["gameSetting"]
         if (self.gameSetting is not None) and (self.game_rule is None):
             self.game_rule = game_rule(self.gameSetting)
         self.request = data["request"]
         self.talkHistory = data["talkHistory"]
         if self.talkHistory:
-            LOGGER.info(f'f"[{self.name}] start embedding talkHistory')
+            LOGGER.info(f'[{self.name}] start embedding talkHistory')
             suspects = util.map_async(
                 func=self.embedding_model.check_role_suspicion,
                 data=[talk["text"] for talk in self.talkHistory],
                 limit=8
             )
-            LOGGER.info(f'f"[{self.name}] end embedding talkHistory')
+            LOGGER.info(f'[{self.name}] end embedding talkHistory')
             for suspect, talk in zip(suspects, self.talkHistory):
                 if suspect is not None:
                     if suspect not in self.agent_role_suspect[talk["agent"]]:
                         self.agent_role_suspect[talk["agent"]].append(suspect)
-            LOGGER.info(f'f"[{self.name}] update agent_role_suspect: {self.agent_role_suspect}')
+            LOGGER.info(f'[{self.name}] update agent_role_suspect: {self.agent_role_suspect}')
             self.todays_talk_history.extend(self.talkHistory)
         self.whisperHistory = data["whisperHistory"]
 
@@ -97,7 +101,7 @@ class Agent:
                 and int(agent_num) != self.index
             ):
                 self.alive.append(int(agent_num))
-        self.game_info_text = game_info(self.gameInfo, self.role)
+        self.game_info_text = game_info(self.gameInfo, self.role, self.divine_results)
 
     def daily_finish(self) -> None:
         pass
@@ -134,9 +138,9 @@ class Agent:
         if self.last_talk_emb is not None:
             if (cosine_similarity(response_emb,
                                   self.last_talk_emb,
-                                  dim=2).item()) > 0.9:
+                                  dim=2).item()) > 0.95:
                 response = "Over"
-                LOGGER.info('Over')
+                LOGGER.info(f'[{self.name}] Over')
         self.last_talk_emb = response_emb
         # 回答を返す。
         LOGGER.info(f"[{self.name}] talk end")
@@ -200,6 +204,7 @@ class Agent:
         new_agent.client = self.client
         new_agent.embedding_model = self.embedding_model
         new_agent.agent_role_suspect = self.agent_role_suspect
+        new_agent.divine_results = self.divine_results
 
         # get_info
         new_agent.gameInfo = self.gameInfo

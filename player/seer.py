@@ -51,6 +51,7 @@ class Seer(player.agent.Agent):
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
              for talk in self.todays_talk_history])
         arguments = self.client.divine(
+            index=self.index,
             game_setting=self.game_rule,
             game_info=self.game_info_text,
             role_suspicion=role_suspicion_text,

@@ -1,19 +1,13 @@
-from env import load_env
-from lib.llm import openai_client
+import pickle
+from time import time
 
-load_env()
-client = openai_client.OpenAIClient()
-print(client.vote("", "", "", "Agent[04]: Agent[01]は人狼だと思います！"))
-# import pickle
-# from time import time
-
-# import torch
-# from lib import util
-# from lib.embedding import Embedding
-# from torch.nn.functional import cosine_similarity
+import torch
+from lib import util
+from lib.embedding import Embedding
+from torch.nn.functional import cosine_similarity
 
 # texts = ["私はAgent[01]のことを本物の占い師だと信じていません！", "私はAgent[02]のことを本物の占い師だと信じていません！", "私はAgent[03]のことを本物の占い師だと信じていません！"]
-# embedding = Embedding()
+embedding = Embedding()
 # start = time()
 # suspects = util.map_async(
 #     func=embedding.check_role_suspicion,
@@ -37,13 +31,15 @@ print(client.vote("", "", "", "Agent[04]: Agent[01]は人狼だと思います�
 #     script = pickle.load(f)
 
 # start = time()
-# emb = embedding.encode("私はAgent[01]のことを本物の占い師だと信じていません！")
+emb = embedding.encode("「初日ですが、皆さん楽しいゲームになるといいですね。お互いを信じて進めましょう。」")
+emb2 = embedding.encode("「初日の挨拶、ありがとうございます。皆さんとても楽しそうな雰囲気ですね。お互いを信じながら進めていきましょう。」")
 # end = time()
 # print(end - start)
 
-# sim = cosine_similarity(torch.cat(script[1]),
-#                         emb,
-#                         dim=2)
+sim = cosine_similarity(emb2,
+                        emb,
+                        dim=2)
+print(sim)
 # max_index = max(enumerate(sim.tolist()), key=lambda x: x[1])[0]
 
 # print(sim[max_index].item())

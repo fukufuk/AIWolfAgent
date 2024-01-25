@@ -6,6 +6,7 @@ from openai import OpenAI
 class OpenAIClient:
     def __init__(self):
         self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        self.model = "gpt-3.5-turbo-1106"
 
     def talk(self,
              agent_index: int,
@@ -22,9 +23,9 @@ class OpenAIClient:
         # return  # 消すとopenaiが使用できる
         response = self.client.chat.completions.create(
             messages=messages,
-            model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
-            temperature=0.3,
-            max_tokens=100
+            model=self.model,
+            temperature=0.5,
+            max_tokens=80
         )
         return response.choices[0].message.content
 
@@ -44,12 +45,13 @@ class OpenAIClient:
             messages=messages,
             tools=tools,
             tool_choice={"type": "function", "function": {"name": "decide_person_to_vote"}},
-            model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
+            model=self.model,
             temperature=0
         )
         return response.choices[0].message.tool_calls[0].function.arguments
 
     def divine(self,
+               index: int,
                game_setting: str,
                game_info: str,
                role_suspicion: str,
@@ -58,12 +60,12 @@ class OpenAIClient:
                                            game_info,
                                            role_suspicion,
                                            talkHistory)
-        tools = _create_divine_tools()
+        tools = _create_divine_tools(index)
         response = self.client.chat.completions.create(
             messages=messages,
             tools=tools,
             tool_choice={"type": "function", "function": {"name": "decide_person_to_divine"}},
-            model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
+            model=self.model,
             temperature=0
         )
         return response.choices[0].message.tool_calls[0].function.arguments
@@ -82,7 +84,7 @@ class OpenAIClient:
             messages=messages,
             tools=tools,
             tool_choice={"type": "function", "function": {"name": "decide_person_to_attack"}},
-            model="gpt-3.5-turbo-1106",  # TODO: 後でconfigから取得するようにする
+            model=self.model,
             temperature=0
         )
         return response.choices[0].message.tool_calls[0].function.arguments
@@ -96,7 +98,8 @@ def _create_talk_messages(agent_index,
     messages = [
         {
             "role": "system",
-            "content": "あなたは人狼ゲームの参加者です。以下の条件をもとに続きの会話を50文字以内で考えてください。"
+            "content": "あなたは人狼ゲームの参加者です。以下の条件をもとに次に続く発言を50文字以内で考えてください。"
+                    + "発言は会話を深めるようにクリエイティブさを意識してください。"
         },
         {
             "role": "user",
@@ -169,7 +172,7 @@ def _create_divine_messages(game_setting, game_info, role_suspicion, talkHistory
     return messages
 
 
-def _create_divine_tools():
+def _create_divine_tools(index: int):
     tools = [
         {
             "type": "function",
@@ -181,7 +184,7 @@ def _create_divine_tools():
                     "properties": {
                         "agentIdx": {
                             "type": "integer",
-                            "description": "the number of the agent who is deciding who to divine",
+                            "description": f"the number of the agent which you should divine. choose from {[i for i in range(1, 6) if i != index]}",
                         },
                     },
                     "required": ["agentIdx"],

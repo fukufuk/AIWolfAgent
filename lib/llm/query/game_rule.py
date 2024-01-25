@@ -29,6 +29,7 @@ def game_rule(game_setting: dict) -> str:
 - スキップ上限 -> {game_setting['maxSkip']}回
 - 1日の発言回数 -> {game_setting['maxTalk']}回まで
 - 最大ターン数 -> {game_setting['maxTalkTurn']}ターン
+- 0日目は簡潔な挨拶のみ(役職は開示しない)
 """
 # - 禁止事項 -> {",".join([rule_dict[key]
 #                      for key in game_setting if game_setting[key] is True])}
