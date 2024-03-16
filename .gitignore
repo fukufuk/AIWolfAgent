@@ -3,6 +3,7 @@ venv/
 .git
 *.env
 *.pickle
+res/ssh-config
 embedding_model/*
 !/embedding_model/**/.gitkeep
 lib/embedding/data/*
