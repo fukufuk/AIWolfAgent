@@ -1,11 +1,11 @@
 import configparser
+import json
 
-# import lib
+import lib
 import player
 from lib.llm.query import role_suspicion
 from lib.logger import build_logger
 
-# import json
 LOGGER = build_logger(__name__)
 
 
@@ -46,6 +46,10 @@ class Seer(player.agent.Agent):
 
     def divine(self) -> str:
         LOGGER.info(f"[{self.name}] DIVINE")
+        if self.day == 0:
+            data = {"agentIdx": lib.util.random_select(self.alive)}
+            LOGGER.info(f"[{self.name}] DIVINE end.({data})")
+            return json.dumps(data, separators=(",", ":"))
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
@@ -57,11 +61,8 @@ class Seer(player.agent.Agent):
             role_suspicion=role_suspicion_text,
             talkHistory=latest_talks
         )
-        LOGGER.info(f"[{self.name}] DIVINE end")
+        LOGGER.info(f"[{self.name}] DIVINE end.(argeuments:{arguments})")
         return arguments
-        # data = {"agentIdx": lib.util.random_select(self.alive)}
-
-        # return json.dumps(data, separators=(",", ":"))
 
     def action(self) -> str:
         if self.request == "DIVINE":

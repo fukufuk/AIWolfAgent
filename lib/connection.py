@@ -139,12 +139,11 @@ class SSHServer(Connection):
     def connect(self, remote_foward_flag=True) -> None:
         self.set_ssh_toolkit()
         self.set_ssh_config()
-
         self.ssh_client.connect(
             self.config["hostname"],
             username=self.config["user"],
             pkey=self.ssh_pkey,
-            key_filename=self.config.get("identityfile"),
+            key_filename=self.config.get("identityfile")[0],
             timeout=self.timeout,
         )
 

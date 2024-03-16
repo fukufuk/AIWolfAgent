@@ -22,6 +22,7 @@ class Agent:
         self.divine_results = []
         self.data = []  # テスト用
         self.agent_role_suspect = {}  # 各エージェントがどのような役職だと疑っているか
+        self.day = 0
         # TODO: エージェントの数を反映する
         for i in range(1, 6):
             self.agent_role_suspect[i] = []
@@ -71,6 +72,9 @@ class Agent:
             self.game_rule = game_rule(self.gameSetting)
         self.request = data["request"]
         self.talkHistory = data["talkHistory"]
+        self.whisperHistory = data["whisperHistory"]
+
+    def talk_embedding(self) -> None:
         if self.talkHistory:
             LOGGER.info(f'[{self.name}] start embedding talkHistory')
             suspects = util.map_async(
@@ -85,13 +89,13 @@ class Agent:
                         self.agent_role_suspect[talk["agent"]].append(suspect)
             LOGGER.info(f'[{self.name}] update agent_role_suspect: {self.agent_role_suspect}')
             self.todays_talk_history.extend(self.talkHistory)
-        self.whisperHistory = data["whisperHistory"]
 
     def initialize(self) -> None:
         self.index = self.gameInfo["agent"]
         self.role = self.gameInfo["roleMap"][str(self.index)]
 
     def daily_initialize(self) -> None:
+        LOGGER.info(f"[{self.name}] daily_initialize")
         self.alive = []
         self.todays_talk_history = []
         self.last_talk_emb = None
@@ -102,6 +106,7 @@ class Agent:
             ):
                 self.alive.append(int(agent_num))
         self.game_info_text = game_info(self.gameInfo, self.role, self.divine_results)
+        self.day = self.gameInfo["day"]
 
     def daily_finish(self) -> None:
         pass
@@ -115,14 +120,21 @@ class Agent:
     # TODO: 会話の内容を考える
     def talk(self) -> str:
         LOGGER.info(f"[{self.name}] talk")
+        if self.day == 0:
+            LOGGER.info(f"[{self.name}] talk ends")
+            return "Over"
         # 1. 前日までの人狼の状況を簡潔にまとめる。
         # (daily_initializeでself.game_info_textに作成)
         # 2. 前日までの会話を追加する。
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
         # 3. 今日の今までの会話を追加する。
+        if len(self.todays_talk_history) <= 9:
+            talk_history = self.todays_talk_history[-9:]
+        else:
+            talk_history = self.talkHistory
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
-             for talk in self.talkHistory])
+             for talk in talk_history])
         # 4. gptに聞く。
         response = self.client.talk(  # TODO: 占いの結果が渡されていなかった😭
             agent_index=self.index,
@@ -138,7 +150,7 @@ class Agent:
         if self.last_talk_emb is not None:
             if (cosine_similarity(response_emb,
                                   self.last_talk_emb,
-                                  dim=2).item()) > 0.95:
+                                  dim=2).item()) > 0.93:
                 response = "Over"
                 LOGGER.info(f'[{self.name}] Over')
         self.last_talk_emb = response_emb
@@ -159,7 +171,7 @@ class Agent:
             role_suspicion=role_suspicion_text,
             talkHistory=latest_talks
         )
-        LOGGER.info(f"[{self.name}] vote end")
+        LOGGER.info(f"[{self.name}] vote end (arguments:{arguments})")
         return arguments
 
     # TODO: 仲間内での会話を考える
@@ -167,9 +179,6 @@ class Agent:
         pass
 
     def finish(self) -> str:
-        # pickleで保存（書き出し）テスト用
-        with open(f'data/data_{self.name}.pickle', mode='wb') as f:
-            pickle.dump(self.data, f)
         self.gameContinue = False
 
     def action(self) -> str:
@@ -219,6 +228,7 @@ class Agent:
 
         # daily_initialize
         new_agent.game_info_text = self.game_info_text
+        new_agent.day = self.day
 
         # talk
         new_agent.todays_talk_history = self.todays_talk_history

@@ -45,6 +45,10 @@ class Werewolf(player.agent.Agent):
 
     def attack(self):
         LOGGER.info(f"[{self.name}] ATTACK")
+        if self.day == 0:
+            data = {"agentIdx": lib.util.random_select(self.alive)}
+            LOGGER.info(f"[{self.name}] ATTACK end.({data})")
+            return json.dumps(data, separators=(",", ":"))
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
@@ -55,12 +59,9 @@ class Werewolf(player.agent.Agent):
             role_suspicion=role_suspicion_text,
             talkHistory=latest_talks
         )
-        LOGGER.info(f"[{self.name}] ATTACK end")
+        LOGGER.info(f"[{self.name}] ATTACK end.(arguments:{arguments})")
         return arguments
-        data = {"agentIdx": lib.util.random_select(self.alive)}
-
-        return json.dumps(data, separators=(",", ":"))
-
+        
     def action(self) -> str:
         if self.request == "ATTACK":
             return self.attack()

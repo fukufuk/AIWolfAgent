@@ -32,7 +32,7 @@ class Embedding:
                                 txt_emb,
                                 dim=2)
         max_index = max(enumerate(sim.tolist()), key=lambda x: x[1])[0]
-        if sim[max_index].item() < 0.9:
+        if sim[max_index].item() < 0.91:
             return None
         return self.ex_scripts[0][max_index]
 

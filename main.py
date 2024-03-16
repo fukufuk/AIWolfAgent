@@ -4,6 +4,9 @@ from typing import Union
 import lib
 import player
 from lib.AIWolf.commands import AIWolfCommand
+from lib.logger import build_logger
+
+LOGGER = build_logger(__name__)
 
 
 def main(
@@ -19,8 +22,10 @@ def main(
     while agent.gameContinue:
         if len(agent.received) == 0:
             agent.parse_info(receive=sock.receive())
+        LOGGER.info(f"[{agent.name}] received request")
 
         agent.get_info()
+        agent.talk_embedding()
         message = agent.action()
 
         if AIWolfCommand.is_initialize(request=agent.request):
@@ -28,7 +33,6 @@ def main(
 
         if message != "":
             sock.send(message=message)
-
     return agent.received if len(agent.received) != 0 else None
 
 
