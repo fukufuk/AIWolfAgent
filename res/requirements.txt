@@ -11,5 +11,5 @@ requests==2.31.0
 urllib3==2.0.5
 python-dotenv==1.0.0
 openai==1.8.0
-setence-transformers==2.2.2
+setence-transformers
 pandas==2.2.1
