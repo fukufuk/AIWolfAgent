@@ -4,11 +4,10 @@ import pickle
 
 from lib import util
 from lib.AIWolf.commands import AIWolfCommand
-from lib.embedding.embedding import Embedding
+from lib.embedding.embedding import Embedding, _cosine_similarity
 from lib.llm.openai_client import OpenAIClient
 from lib.llm.query import game_info, game_rule, role_suspicion
 from lib.logger import build_logger
-from torch.nn.functional import cosine_similarity
 
 LOGGER = build_logger(__name__)
 
@@ -23,9 +22,6 @@ class Agent:
         self.data = []  # テスト用
         self.agent_role_suspect = {}  # 各エージェントがどのような役職だと疑っているか
         self.day = 0
-        # TODO: エージェントの数を反映する
-        for i in range(1, 6):
-            self.agent_role_suspect[i] = []
         self.client = OpenAIClient()
         self.embedding_model = Embedding()
 
@@ -33,7 +29,7 @@ class Agent:
         self.game_info_text = None
 
         # talk
-        self.todays_talk_history = []
+        # self.todays_talk_history = []
         self.last_talk_emb = []
 
         randomTalk = inifile.get("randomTalk", "path")
@@ -85,10 +81,11 @@ class Agent:
             LOGGER.info(f'[{self.name}] end embedding talkHistory')
             for suspect, talk in zip(suspects, self.talkHistory):
                 if suspect is not None:
-                    if suspect not in self.agent_role_suspect[talk["agent"]]:
-                        self.agent_role_suspect[talk["agent"]].append(suspect)
+                    self.agent_role_suspect[self.day].append(
+                        {"agent": talk["agent"], "text": suspect}
+                    )
             LOGGER.info(f'[{self.name}] update agent_role_suspect: {self.agent_role_suspect}')
-            self.todays_talk_history.extend(self.talkHistory)
+            # self.todays_talk_history.extend(self.talkHistory)
 
     def initialize(self) -> None:
         self.index = self.gameInfo["agent"]
@@ -97,7 +94,7 @@ class Agent:
     def daily_initialize(self) -> None:
         LOGGER.info(f"[{self.name}] daily_initialize")
         self.alive = []
-        self.todays_talk_history = []
+        # self.todays_talk_history = []
         self.last_talk_emb = None
         for agent_num in self.gameInfo["statusMap"]:
             if (
@@ -107,6 +104,7 @@ class Agent:
                 self.alive.append(int(agent_num))
         self.game_info_text = game_info(self.gameInfo, self.role, self.divine_results)
         self.day = self.gameInfo["day"]
+        self.agent_role_suspect[self.day] = []
 
     def daily_finish(self) -> None:
         pass
@@ -128,10 +126,11 @@ class Agent:
         # 2. 前日までの会話を追加する。
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
         # 3. 今日の今までの会話を追加する。
-        if len(self.todays_talk_history) <= 9:
-            talk_history = self.todays_talk_history[-9:]
-        else:
-            talk_history = self.talkHistory
+        # if len(self.todays_talk_history) <= 9:
+        #     talk_history = self.todays_talk_history[-9:]
+        # else:
+        #     talk_history = self.talkHistory
+        talk_history = self.talkHistory
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
              for talk in talk_history])
@@ -148,9 +147,8 @@ class Agent:
             response
         )
         if self.last_talk_emb is not None:
-            if (cosine_similarity(response_emb,
-                                  self.last_talk_emb,
-                                  dim=2).item()) > 0.93:
+            if (_cosine_similarity(response_emb,
+                                   self.last_talk_emb)) > 0.93:
                 response = "Over"
                 LOGGER.info(f'[{self.name}] Over')
         self.last_talk_emb = response_emb
@@ -162,9 +160,12 @@ class Agent:
     def vote(self) -> str:
         LOGGER.info(f"[{self.name}] vote")
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
+        # latest_talks = "\n".join(
+        #     [f'Agent[0{talk["agent"]}]: {talk["text"]}'
+        #      for talk in self.todays_talk_history])
         latest_talks = "\n".join(
             [f'Agent[0{talk["agent"]}]: {talk["text"]}'
-             for talk in self.todays_talk_history])
+             for talk in self.talkHistory])
         arguments = self.client.vote(
             game_setting=self.game_rule,
             game_info=self.game_info_text,
@@ -231,5 +232,5 @@ class Agent:
         new_agent.day = self.day
 
         # talk
-        new_agent.todays_talk_history = self.todays_talk_history
+        # new_agent.todays_talk_history = self.todays_talk_history
         new_agent.last_talk_emb = self.last_talk_emb

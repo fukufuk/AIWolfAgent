@@ -1,8 +1,10 @@
 import pickle
 
-import torch
+import numpy as np
+from datasets import load_dataset
+from numpy import dot
+from numpy.linalg import norm
 from torch import Tensor
-from torch.nn.functional import cosine_similarity
 from transformers import AutoModel, AutoTokenizer
 
 
@@ -10,6 +12,9 @@ class Embedding:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained('embedding_model')
         self.model = AutoModel.from_pretrained('embedding_model')
+        self.df_scripts = load_dataset(
+            "fukufuk/aiwolf-convs",
+            split="test").to_pandas()
         with open("lib/embedding/data/script_emb.pickle", "rb") as f:
             self.ex_scripts = pickle.load(f)
 
@@ -24,17 +29,16 @@ class Embedding:
         embeddings = _average_pool(
             outputs.last_hidden_state,
             batch_dict["attention_mask"])
-        return embeddings.unsqueeze(0)
+        return embeddings.tolist()
 
     def check_role_suspicion(self, text: str) -> str:
         txt_emb = self.encode(text)
-        sim = cosine_similarity(torch.cat(self.ex_scripts[1]),
-                                txt_emb,
-                                dim=2)
-        max_index = max(enumerate(sim.tolist()), key=lambda x: x[1])[0]
-        if sim[max_index].item() < 0.91:
+        df = self.df_scripts.copy(deep=True)
+        df["sim"] = df["emb"].apply(_add_sim, txt_emb=txt_emb)
+        max_index = df.sort_values('sim', ascending=False).iloc[0]
+        if max_index['sim'] < 0.94:
             return None
-        return self.ex_scripts[0][max_index]
+        return max_index['summary']
 
 
 def _average_pool(last_hidden_states: Tensor, attention_mask: Tensor
@@ -42,3 +46,13 @@ def _average_pool(last_hidden_states: Tensor, attention_mask: Tensor
     last_hidden = last_hidden_states.masked_fill(
         ~attention_mask[..., None].bool(), 0.0)
     return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
+
+
+def _cosine_similarity(v1: list, v2: list) -> float:
+    v1 = np.array([v1])
+    v2 = np.array(v2).T
+    return dot(v1, v2) / (norm(v1) * norm(v2))
+
+
+def _add_sim(ex_emb: list, txt_emb: list) -> float:
+    return _cosine_similarity(ex_emb, txt_emb)

@@ -10,7 +10,7 @@ LOGGER = build_logger(__name__)
 class OpenAIClient:
     def __init__(self):
         self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        self.model = "gpt-4-1106-preview"  # "gpt-3.5-turbo-0125"  #
+        self.model = "gpt-3.5-turbo-0125"  # "gpt-4-1106-preview"  #
 
     def talk(self,
              agent_index: int,

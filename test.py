@@ -1,10 +1,13 @@
 from time import time
 
-from transformers import AutoModel, AutoTokenizer
+from lib.embedding import Embedding
+
+embedder = Embedding()
 
 start = time()
+emb = embedder._encode("I am a villager")
+print("time:", time() - start)
 
-tokenizer = AutoTokenizer.from_pretrained('embedding_model')
-model = AutoModel.from_pretrained('embedding_model')
-
-print(f"Time: {time() - start}")
+print(len(emb))
+print(len(emb[0]))
+print(len(embedder.df_scripts.iloc[0]['emb']))

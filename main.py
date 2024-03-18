@@ -25,7 +25,6 @@ def main(
         LOGGER.info(f"[{agent.name}] received request")
 
         agent.get_info()
-        agent.talk_embedding()
         message = agent.action()
 
         if AIWolfCommand.is_initialize(request=agent.request):
@@ -33,6 +32,9 @@ def main(
 
         if message != "":
             sock.send(message=message)
+
+        agent.talk_embedding()
+
     return agent.received if len(agent.received) != 0 else None
 
 
