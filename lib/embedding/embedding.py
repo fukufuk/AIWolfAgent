@@ -14,9 +14,7 @@ class Embedding:
         self.model = AutoModel.from_pretrained('embedding_model')
         self.df_scripts = load_dataset(
             "fukufuk/aiwolf-convs",
-            split="test").to_pandas()
-        with open("lib/embedding/data/script_emb.pickle", "rb") as f:
-            self.ex_scripts = pickle.load(f)
+            split="train").to_pandas()
 
     def encode(self, text: str) -> Tensor:
         batch_dict = self.tokenizer(
@@ -36,6 +34,7 @@ class Embedding:
         df = self.df_scripts.copy(deep=True)
         df["sim"] = df["emb"].apply(_add_sim, txt_emb=txt_emb)
         max_index = df.sort_values('sim', ascending=False).iloc[0]
+        print("Embeddingの結果:", text, df.sort_values('sim', ascending=False).head(3))
         if max_index['sim'] < 0.94:
             return None
         return max_index['summary']

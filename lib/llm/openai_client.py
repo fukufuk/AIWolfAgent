@@ -10,7 +10,7 @@ LOGGER = build_logger(__name__)
 class OpenAIClient:
     def __init__(self):
         self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        self.model = "gpt-3.5-turbo-0125"  # "gpt-4-1106-preview"  #
+        self.model = "gpt-4-1106-preview"  # "gpt-3.5-turbo-0125"  #
 
     def talk(self,
              agent_index: int,
@@ -37,12 +37,12 @@ class OpenAIClient:
              game_setting: str,
              game_info: str,
              role_suspicion: str,
-             talkHistory: str
+            #  talkHistory: str
              ) -> str:  # JSON形式の文字列
         messages = _create_vote_messages(game_setting,
                                          game_info,
-                                         role_suspicion,
-                                         talkHistory)
+                                         role_suspicion,)
+                                        #  talkHistory)
         tools = _create_vote_tools()
         # return ""  # 消すとopenaiが使用できる
         response = self.client.chat.completions.create(
@@ -61,12 +61,10 @@ class OpenAIClient:
                index: int,
                game_setting: str,
                game_info: str,
-               role_suspicion: str,
-               talkHistory: str) -> str:  # JSON形式の文字列
+               role_suspicion: str) -> str:  # JSON形式の文字列
         messages = _create_divine_messages(game_setting,
                                            game_info,
-                                           role_suspicion,
-                                           talkHistory)
+                                           role_suspicion)
         tools = _create_divine_tools(index)
         response = self.client.chat.completions.create(
             messages=messages,
@@ -75,6 +73,9 @@ class OpenAIClient:
             model=self.model,
             temperature=0
         )
+        divine_res = json.loads(response.choices[0].message.tool_calls[0].function.arguments)
+        if divine_res["agentIdx"] == index:
+            return None
         return response.choices[0].message.tool_calls[0].function.arguments
         response = json.loads(response.choices[0].message.tool_calls[0].function.arguments)
         LOGGER.info(f"divine response: {response}")
@@ -83,12 +84,10 @@ class OpenAIClient:
     def attack(self,
                game_setting: str,
                game_info: str,
-               role_suspicion: str,
-               talkHistory: str) -> str:  # JSON形式の文字列
+               role_suspicion: str) -> str:  # JSON形式の文字列
         messages = _create_attack_messages(game_setting,
                                            game_info,
-                                           role_suspicion,
-                                           talkHistory)
+                                           role_suspicion)
         tools = _create_attack_tools()
         response = self.client.chat.completions.create(
             messages=messages,
@@ -131,7 +130,8 @@ def _create_talk_messages(agent_index,
     return messages
 
 
-def _create_vote_messages(game_setting, game_info, role_suspicion, talkHistory):
+def _create_vote_messages(game_setting, game_info, role_suspicion,):
+                        #   talkHistory):
     messages = [
         {
             "role": "user",
@@ -140,8 +140,8 @@ def _create_vote_messages(game_setting, game_info, role_suspicion, talkHistory):
                     + game_info
                     + "\n"
                     + role_suspicion
-                    + "\n現在の会話\n"
-                    + talkHistory,
+                    # + "\n現在の会話\n"
+                    # + talkHistory,
         },
     ]
     return messages
@@ -170,7 +170,7 @@ def _create_vote_tools():
     return tools
 
 
-def _create_divine_messages(game_setting, game_info, role_suspicion, talkHistory):
+def _create_divine_messages(game_setting, game_info, role_suspicion):
     messages = [
         {
             "role": "user",
@@ -178,9 +178,7 @@ def _create_divine_messages(game_setting, game_info, role_suspicion, talkHistory
                     + "\n"
                     + game_info
                     + "\n"
-                    + role_suspicion
-                    + "\n現在の会話\n"
-                    + talkHistory,
+                    + role_suspicion,
         },
     ]
     return messages
@@ -209,7 +207,7 @@ def _create_divine_tools(index: int):
     return tools
 
 
-def _create_attack_messages(game_setting, game_info, role_suspicion, talkHistory):
+def _create_attack_messages(game_setting, game_info, role_suspicion):
     messages = [
         {
             "role": "user",
@@ -218,8 +216,6 @@ def _create_attack_messages(game_setting, game_info, role_suspicion, talkHistory
                     + game_info
                     + "\n"
                     + role_suspicion
-                    + "\n現在の会話\n"
-                    + talkHistory,
         },
     ]
     return messages

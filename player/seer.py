@@ -51,16 +51,17 @@ class Seer(player.agent.Agent):
             LOGGER.info(f"[{self.name}] DIVINE end.({data})")
             return json.dumps(data, separators=(",", ":"))
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
-        latest_talks = "\n".join(
-            [f'Agent[0{talk["agent"]}]: {talk["text"]}'
-             for talk in self.todays_talk_history])
+        # latest_talks = "\n".join(
+        #     [f'Agent[0{talk["agent"]}]: {talk["text"]}'
+        #      for talk in self.talkHistory])
         arguments = self.client.divine(
             index=self.index,
             game_setting=self.game_rule,
             game_info=self.game_info_text,
-            role_suspicion=role_suspicion_text,
-            talkHistory=latest_talks
+            role_suspicion=role_suspicion_text
         )
+        if arguments is None:
+            arguments = json.dumps({"agentIdx": lib.util.random_select(self.alive)}, separators=(",", ":"))
         LOGGER.info(f"[{self.name}] DIVINE end.(argeuments:{arguments})")
         return arguments
 

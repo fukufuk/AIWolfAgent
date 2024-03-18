@@ -50,14 +50,13 @@ class Werewolf(player.agent.Agent):
             LOGGER.info(f"[{self.name}] ATTACK end.({data})")
             return json.dumps(data, separators=(",", ":"))
         role_suspicion_text = role_suspicion(self.agent_role_suspect)
-        latest_talks = "\n".join(
-            [f'Agent[0{talk["agent"]}]: {talk["text"]}'
-             for talk in self.todays_talk_history])
+        # latest_talks = "\n".join(
+        #     [f'Agent[0{talk["agent"]}]: {talk["text"]}'
+        #      for talk in self.talkHistory])
         arguments = self.client.attack(
             game_setting=self.game_rule,
             game_info=self.game_info_text,
-            role_suspicion=role_suspicion_text,
-            talkHistory=latest_talks
+            role_suspicion=role_suspicion_text
         )
         LOGGER.info(f"[{self.name}] ATTACK end.(arguments:{arguments})")
         return arguments

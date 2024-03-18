@@ -9,26 +9,25 @@ import main
 def execute_game(inifile: configparser.ConfigParser, name: str):
     # connect to server or listen client
 
-    if inifile.getboolean("connection", "ssh_flag"):
-        sock = lib.connection.SSHServer(inifile=inifile, name=name)
-    else:
-        sock = (
-            lib.connection.TCPServer(inifile=inifile, name=name)
-            if inifile.getboolean("connection", "host_flag")
-            else lib.connection.TCPClient(inifile=inifile)
-        )
+    while True:
 
-    sock.connect()
+        # connect to server or listen client
+        if inifile.getboolean("connection","ssh_flag"):
+            sock = lib.connection.SSHServer(inifile=inifile, name=name)
+        else:
+            sock = lib.connection.TCPServer(inifile=inifile, name=name) if inifile.getboolean("connection","host_flag") else lib.connection.TCPClient(inifile=inifile)
+        
+        sock.connect()
 
-    received = None
+        received = None
 
-    for _ in range(inifile.getint("game", "num")):
-        received = main.main(sock=sock,
-                             inifile=inifile,
-                             received=received,
-                             name=name)
+        for _ in range(inifile.getint("game","num")):
+            received = main.main(sock=sock, inifile=inifile, received=received, name=name)
+        
+        sock.close()
 
-    sock.close()
+        if not inifile.getboolean("connection","keep_connection"):
+            break
 
 
 if __name__ == "__main__":

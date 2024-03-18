@@ -163,14 +163,13 @@ class Agent:
         # latest_talks = "\n".join(
         #     [f'Agent[0{talk["agent"]}]: {talk["text"]}'
         #      for talk in self.todays_talk_history])
-        latest_talks = "\n".join(
-            [f'Agent[0{talk["agent"]}]: {talk["text"]}'
-             for talk in self.talkHistory])
+        # latest_talks = "\n".join(
+        #     [f'Agent[0{talk["agent"]}]: {talk["text"]}'
+        #      for talk in self.talkHistory])
         arguments = self.client.vote(
             game_setting=self.game_rule,
             game_info=self.game_info_text,
             role_suspicion=role_suspicion_text,
-            talkHistory=latest_talks
         )
         LOGGER.info(f"[{self.name}] vote end (arguments:{arguments})")
         return arguments
