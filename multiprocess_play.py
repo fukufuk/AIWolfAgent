@@ -5,9 +5,7 @@ import env
 import lib
 import main
 
-
-def execute_game(inifile: configparser.ConfigParser, name: str):
-    # connect to server or listen client
+def execute_game(inifile:configparser.ConfigParser, name:str):
 
     while True:
 

@@ -5,7 +5,7 @@ from lib.embedding import Embedding
 embedder = Embedding()
 
 start = time()
-emb = embedder._encode("I am a villager")
+emb = embedder.encode("I am a villager")
 print("time:", time() - start)
 
 print(len(emb))
